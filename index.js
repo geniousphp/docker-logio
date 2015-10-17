@@ -7,6 +7,7 @@ var program = require('commander');
 var through = require('through2');
 var os = require("os");
 
+
 program
   .version('0.1.0')
   .option('-h, --host [host]', 'LogIo server host', 'localhost')
@@ -25,6 +26,7 @@ var s = connect();
 var ee = allContainers({
   preheat: true,
   docker: null,
+  matchByName: process.env.MATCHBYNAME || '',
 });
 
 var opts = {
@@ -33,15 +35,13 @@ var opts = {
   events: ee
 };
 loghose(opts).pipe(through.obj(function(chunk, enc, cb){
-  this.push('+log|'+chunk.image+'|'+program.name+':'+chunk.id+'|info|'+chunk.line+'\r\n');
+  this.push('+log|'+chunk.image+'|'+chunk.name+'|info|'+chunk.line+'\r\n');
   cb();
 })).pipe(s);
 
 ee.on('start', function(meta, container) {
-  var id = meta.id.substring(0, 12);
-  s.write('+node|'+program.name+':'+id+'|'+meta.image+'\r\n');
+  s.write('+node|'+meta.name+'|'+meta.image+'\r\n');
 });
 ee.on('stop', function(meta, container) {
-  var id = meta.id.substring(0, 12);
-  s.write('-node|'+program.name+':'+id+'\r\n');
+  s.write('-node|'+meta.name+'\r\n');
 });
